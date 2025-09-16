@@ -2,6 +2,8 @@ from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import os
+
 
 try:
     from embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
@@ -56,4 +58,5 @@ async def verify(file: UploadFile = File(...)):
         return JSONResponse({'error': str(e)}, status_code=500)
 
 if __name__ == '__main__':
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))  # get port from env
+    uvicorn.run(app, host="0.0.0.0", port=port)
