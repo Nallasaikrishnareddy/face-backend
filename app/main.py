@@ -1,26 +1,40 @@
-# main.py
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from .embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
-from .db import init_db, insert_face, find_best_match
+
+try:
+    from embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
+    from db import init_db, insert_face, find_best_match
+except ImportError:
+    from .embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
+    from .db import init_db, insert_face, find_best_match
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # your frontend origin
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add root endpoint to fix 404
+@app.get("/")
+async def root():
+    return {"message": "Face Recognition API is running"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 init_db()
 
 @app.post('/register')
 async def register(name: str = Form(...), file: UploadFile = File(...)):
     image_bytes = await file.read()
-    emb = get_embedding_from_bytes(image_bytes)  # numpy array float32
+    emb = get_embedding_from_bytes(image_bytes)
     emb_blob = emb_to_bytes(emb)
     row_id = insert_face(name, emb_blob, image_bytes)
     return JSONResponse({'status': 'ok', 'id': row_id})
@@ -35,4 +49,4 @@ async def verify(file: UploadFile = File(...)):
     return JSONResponse({'match': None})
 
 if __name__ == '__main__':
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
